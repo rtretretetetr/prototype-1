@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRUD</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mx-auto">
+          <h2 class="text-center">Список пользователей</h2>
+
+          <form name="userForm">
+            <input type="hidden" name="id" value="0" />
+            <div class="form-group">
+              <label for="name"> Имя: </label>
+              <input name="name" class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="age">Возраст</label>
+              <input name="age" class="form-control" />
+            </div>
+
+            <div class="panel-body" style="margin: 10px 0">
+              <button type="submit" class="btn btn-sm btn-primary">
+                Сохрaнить
+              </button>
+              <button type="reset" class="btn btn-sm btn-danger">
+                Сбросить
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="col-lg-10 mx-auto">
+          <table class="table table-condensed table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Возраст</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function getUsers() {
+        const response = await fetch("/api/users", {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        });
+
+        if (response.ok === true) {
+          const users = await response.json();
+          let rows = document.querySelector("tbody");
+          users.forEach((user) => {
+            rows.append(row(user));
+          });
+        }
+      }
+
+      async function deleteUser(id) {
+        const response = await fetch("/api/users/" + id, {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        });
+        if (response.ok === true) {
+          const user = await response.json();
+          document.querySelector(`tr[data-rowid='${user.id}']`).remove();
+        }
+      }
+
+      async function createUser(userName, userAge) {
+        const response = await fetch("api/users", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: userName,
+            age: parseInt(userAge, 10),
+          }),
+        });
+
+        if (response.ok === true) {
+          const user = await response.json();
+          reset();
+          document.querySelector("tbody").append(row(user));
+        }
+      }
+
+      async function getUser(id) {
+        const response = await fetch("/api/users/" + id, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (response.ok === true) {
+          const user = await response.json();
+          const form = document.forms["userForm"];
+          form.elements["id"].value = +user.id;
+          form.elements["name"].value = user.name;
+          form.elements["age"].value = user.age;
+        }
+      }
+
+      async function editUser(userId, userName, userAge) {
+        const response = await fetch("/api/users", {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: userId,
+            name: userName,
+            age: parseInt(userAge, 10),
+          }),
+        });
+
+        if (response.ok === true) {
+          const user = await response.json();
+          document
+            .querySelector(`tr[data-rowid='${user.id}']`)
+            .replaceWith(row(user));
+        }
+      }
+
+      function row(user) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-rowid", user.id);
+
+        const idTd = document.createElement("td");
+        idTd.append(user.id);
+        tr.append(idTd);
+
+        const nameTd = document.createElement("td");
+        nameTd.append(user.name);
+        tr.append(nameTd);
+
+        const ageTd = document.createElement("td");
+        ageTd.append(user.age);
+        tr.append(ageTd);
+
+        const linksTd = document.createElement("td");
+
+        const deleteLink = document.createElement("a");
+        deleteLink.setAttribute("data-id", user.id);
+        deleteLink.setAttribute("style", "cursor: pointer; padding: 15px;");
+        deleteLink.append("Удалить");
+        deleteLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          deleteUser(user.id);
+        });
+
+        linksTd.append(deleteLink);
+
+        const editLink = document.createElement("a");
+        editLink.setAttribute("data-id", user.id);
+        editLink.setAttribute("style", "cursor: pointer; padding: 15px;");
+        editLink.append("Изменить");
+        editLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          getUser(user.id);
+        });
+        linksTd.append(editLink);
+        tr.append(linksTd);
+
+        return tr;
+      }
+
+      function reset() {
+        const form = document.forms["userForm"];
+        form.reset();
+        form.elements["id"].value = 0;
+      }
+
+      document.forms["userForm"].addEventListener("submit", (e) => {
+        e.preventDefault();
+        const form = document.forms["userForm"];
+        const id = form.elements["id"].value;
+        const name = form.elements["name"].value;
+        const age = form.elements["age"].value;
+        if (id == 0) {
+          createUser(name, age);
+        }else{
+            editUser(id, name, age)
+        }
+      });
+
+      getUsers();
+    </script>
+  </body>
+</html>
